@@ -1,0 +1,27 @@
+{
+  "name": "@simcu/simapi",
+  "version": "1.2.0",
+  "description": "A common api library (https://github.com/simapi)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simapi/javascript.git"
+  },
+  "keywords": [
+    "simcu",
+    "simapi",
+    "httpapi"
+  ],
+  "author": "xRain",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/simapi/javascript/issues"
+  },
+  "homepage": "https://github.com/simapi/javascript#readme",
+  "dependencies": {
+    "axios": "^0.19.2"
+  }
+}
