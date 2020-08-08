@@ -12,27 +12,35 @@ export default {
         server: null,
         //是否为调试模式
         debug: false,
-        //登陆地址
-        loginUrl: "/",
-        //是否强制登陆，如果为true，监测到401响应会强制跳转到登陆页面
-        forceLogin: true,
-        //提示信息相关
-        notices: {
-            //提示方式方法
-            method: window.alert,
-            needLogin: "登陆失效，需要登陆",
-            networkError: "网络请求发生错误"
+        //请求结果预处理
+        responseCallback: {
+            //请求成功预处理
+            success(response) {
+                return response.data;
+            },
+
+            //请求失败预处理
+            error(response) {
+            }
+        },
+        //业务结果预处理
+        businessCallback: {
+            401(data) {
+                localStorage.removeItem('token');
+                window.alert("登陆失效，需要登陆");
+                location.href = "/#/login";
+            }
         }
     },
 
     //获取服务器地址
     getServerUrl() {
-        return this.config.server ? this.config.server : window.server
+        return this.config.server
     },
 
     //是否为调试模式
     isDebug() {
-        return window.debug || this.config.debug
+        return this.config.debug
     },
 
     //Vue插件支持
@@ -77,20 +85,21 @@ export default {
     },
 
     //认证相关操作
-    auth: {
-        login(token) {
-            localStorage.setItem('token', token);
-        },
-        logout(url = "/auth/logout") {
-            localStorage.removeItem('token');
-            return this.query(url);
-        },
-        check(url = "/auth/check") {
-            return this.query(url);
-        },
-        getToken() {
-            return localStorage.getItem('token');
-        }
+    login(token) {
+        localStorage.setItem('token', token);
+    },
+
+    logout(url = "/auth/logout") {
+        localStorage.removeItem('token');
+        return this.query(url);
+    },
+
+    checkLogin(url = "/auth/check") {
+        return this.query(url);
+    },
+
+    getToken() {
+        return localStorage.getItem('token');
     },
 
     //发起post请求
@@ -115,31 +124,30 @@ export default {
         }
         let resp = this.http.post(uri, params);
         return new Promise((resolve, reject) => {
-            resp.then((res) => {
+            resp.then(res => {
                 if (this.isDebug()) {
                     window.console.log('[RESPONSE]', res.config.headers['Query-Id'], '->', res.data)
                 }
-                /**
-                 * API返回全局拦截
-                 */
-                switch (res.data.code) {
-                    case 200:
-                        resolve(res.data);
-                        break;
-                    //需要登录
-                    case 401:
-                        localStorage.removeItem('token');
-                        this.config.notices.method(this.config.notices.needLogin);
-                        location.href = this.config.loginUrl;
-                        break;
-                    default:
-                        reject(res.data);
+
+                //请求结果预处理
+                let respData = this.config.responseCallback.success(res);
+
+                //业务结果预处理
+                if (this.config.businessCallback[respData.code]) {
+                    this.config.businessCallback[respData.code](respData)
                 }
-            }).catch((res) => {
+
+                //处理promise
+                if (respData.code === 200) {
+                    resolve(respData);
+                } else {
+                    reject(respData);
+                }
+            }).catch(res => {
                 if (this.isDebug()) {
-                    window.console.log('[RESPONSE]', res.config.headers['Query-Id'], '->', this.config.notices.networkError)
+                    window.console.log('[RESPONSE]', res.config.headers['Query-Id'], '->', res)
                 }
-                this.config.notices.method(this.config.notices.networkError);
+                this.config.responseCallback.error(res);
             });
         });
     }
